@@ -1,0 +1,68 @@
+[
+  {
+    "model": "mapae.tipocompania",
+    "pk": 1,
+    "fields": {
+      "nombre": "STARTUP",
+      "imagen": "m_startup.png"
+    }
+  },
+  {
+    "model": "mapae.tipocompania",
+    "pk": 2,
+    "fields": {
+      "nombre": "COMPANY",
+      "imagen": "m_evento.png"
+    }
+  },
+  {
+    "model": "mapae.tipocompania",
+    "pk": 3,
+    "fields": {
+      "nombre": "INVESTOR",
+      "imagen": "m_inversor.png"
+    }
+  },
+  {
+    "model": "mapae.tipocompania",
+    "pk": 4,
+    "fields": {
+      "nombre": "COWORKING",
+      "imagen": "m_coworking.png"
+    }
+  },
+  {
+    "model": "mapae.tipocompania",
+    "pk": 5,
+    "fields": {
+      "nombre": "INCUBATOR",
+      "imagen": "m_incubadora.png"
+    }
+  },
+  {
+    "model": "mapae.tipocompania",
+    "pk": 6,
+    "fields": {
+      "nombre": "ACCELERATOR",
+      "imagen": "m_aceleradora.png"
+    }
+  },
+  {
+    "model": "mapae.tipocompania",
+    "pk": 7,
+    "fields": {
+      "nombre": "COLLEGE",
+      "imagen": "m_universidad.png"
+    }
+  },
+  {
+    "model": "mapae.pais",
+    "pk": 1,
+    "fields": {
+      "nombre": "ECUADOR",
+      "latitud": -1.370047,
+      "longitud": -78.639577
+    }
+  }
+
+]

@@ -1,0 +1,448 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Startups Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="Startups Map Demo App">
+    <meta name="author" content="George">
+    <meta charset="utf-8">
+
+    <link rel="shortcut icon" href="{% static 'img/favicon.png' %}">
+
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" media="screen">
+    <link href="{% static 'css/bootstrap-responsive.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet" media="screen">
+
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=true"></script>
+    <script src="{% static 'js/jquery.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/notificacionpanel.js' %}"></script>
+    <script src="{% static 'js/markers.js' %}"></script>
+    <script>
+
+        $(function() {
+
+            $("#adicionarpanel input, #adicionarpanel select, #adicionarpanel textarea").addClass("input-block-level");
+
+            var mapOptions = {
+                zoom: 7,
+                center: new google.maps.LatLng({{ lat_ecu }}, {{ lng_ecu }}),  // ecuador center
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+            map = new google.maps.Map($('#map_canvas').get(0), mapOptions);
+
+            google.maps.event.addListener(map, 'maptypeid_changed', function() {
+                var t = map.mapTypeId;
+                if (t==google.maps.MapTypeId.SATELLITE || t==google.maps.MapTypeId.HYBRID) {
+                    // WHITE THEME
+                    $("#logo").attr("src","/static/img/logomee-white.png");
+                    $(".lnktype").addClass("whitetheme");
+                } else {
+                    // NORMAL THEME
+                    $("#logo").attr("src","/static/img/logomee.png");
+                    $(".lnktype").removeClass("whitetheme");
+                }
+
+            });
+
+            tipos = {
+                {% for t in tipos %}
+                    "{{ t.id }}": {"visible": true, "nombre": "{{ t.nombre }}", "imagen": "{{ t.imagen }}"} {% if not forloop.last %},{% endif %}
+                {% endfor %}
+            };
+
+            companias = [
+                {% for c in companias %}
+                    {"id": "{{ c.id }}","twitter":"{{ c.twitter }}", "facebook":"{{ c.facebook }}", "email":"{{ c.email }}", "descripcion":"{{ c.descripcion }}", "pais":"{{ c.pais.nombre }}", "provincia":"{{ c.provincia.nombre }}", "ciudad":"{{ c.ciudad.nombre }}", "companianombre": "{{ c.nombre }}", "tipo": "{{ c.tipo.id }}", "tiponombre":"{{ c.tipo.nombre }}", "website":"{{ c.website }}", "lat": {{ c.latitud|stringformat:"f" }}, "lng": {{ c.longitud|stringformat:"f" }} } {% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ];
+
+            compania_descripcion = function(c) {
+
+                return "<h5>"+ c.companianombre+"</h5>" +
+                        ((c.website)?"<a href='"+ c.website+"'>"+ c.website+"</a><br/>":"") +
+                        "<i>"+ c.ciudad+",&nbsp;"+ c.provincia+"</i><hr/>" +
+                        "<span class='smaller'>"+ c.descripcion +"<br/>" +
+                        "<b>Email</b>: <a href='mailto:"+ c.email+"'>" + c.email +"</a><br/>" +
+                        ((c.twitter)?"<b>Twitter</b>: <a href='http://twitter.com/"+ c.twitter+"'>"+ c.twitter +"</a><br/>":"")+
+                        ((c.facebook)?"<b>Facebook</b>: <a href='http://www.facebook.com/"+ c.facebook+"'>"+ c.facebook +"</a><br/>":"")+
+                        "</span>";
+            };
+
+            infowindow = new google.maps.InfoWindow({
+                content:'',
+                maxWidth: 350
+            });
+
+            abrirInfoWindow = function() {
+                var compania = this.compania;
+                infowindow.setContent(compania_descripcion(compania));
+                infowindow.open(map,this);
+            };
+
+            mostrar_Markers = function() {
+                for (var i in companias) {
+                    var compania = companias[i];
+                    var tipo = tipos[compania.tipo];
+                    var marker = new google.maps.Marker({
+                        draggable: false,
+                        raiseOnDrag: false,
+                        icon: imagetypes[compania.tipo],
+                        shadow: shadow,
+                        shape: shape,
+                        map: (tipo.visible)?map:null,
+                        title: compania.nombre,
+                        position: new google.maps.LatLng(compania.lat, compania.lng)
+                    });
+                    google.maps.event.addListener(marker, 'click', abrirInfoWindow);
+
+                    compania.marker = marker;
+                    marker.compania = compania;
+                }
+            };
+            mostrar_Markers();
+
+            ocultar_categoria = function(tid) {
+                for (var i in companias) {
+                    var compania = companias[i];
+                    if (compania.tipo == tid) {
+                        var marker = compania.marker;
+                        marker.setMap(null);
+                    }
+                }
+            };
+
+            mostrar_categoria = function(tid) {
+                for (var i in companias) {
+                    var compania = companias[i];
+                    if (compania.tipo == tid) {
+                        var marker = compania.marker;
+                        marker.setMap(map);
+                    }
+                }
+            };
+
+            limpiar_todos_markers = function() {
+                for (var i in companias) {
+                    var compania = companias[i];
+                    var marker = compania.marker;
+                    marker.setMap(null);
+                }
+            };
+
+            $(".lnktype").each(function(index, value) {
+                var tipo = tipos[$(value).attr("tid")];
+                $(value).tooltip({placement:"right", title:"Ocultar " + tipo.nombre});
+            });
+
+            $(".lnktype").click(function() {
+                var tid = $(this).attr("tid");
+                var tipo = tipos[tid];
+                if (tipo.visible) {
+                    // Ocultar categoria
+                    ocultar_categoria(tid);
+                    tipo.visible = false;
+                    $(this).find(".visiblemarker").attr("src","/static/img/false.png");
+                    $(this).tooltip('destroy').tooltip({placement:"right", title:"Mostrar "+ tipo.nombre});
+                } else {
+                    // Mostrar categoria
+                    mostrar_categoria(tid);
+                    tipo.visible = true;
+                    $(this).find(".visiblemarker").attr("src","/static/img/true.png");
+                    $(this).tooltip('destroy').tooltip({placement:"right", title:"Ocultar "+ tipo.nombre});
+                }
+                return false;
+            });
+
+            $(".paisbtn").click(function() {
+                var pid = $(this).attr("paisid");
+                $.post("/paises", {id: pid}, function(data) {
+                    if (data.result == 'ok') {
+                        map.setCenter(new google.maps.LatLng(data.lat, data.lng));
+                        map.setZoom(8);
+                        limpiar_todos_markers();
+                        companies = data.companies;
+                        mostrar_Markers();
+                        for (var i in data.tipos) {
+                            var text = data.tipos[i];
+                            $("#typedesc"+i).html(text);
+                        }
+                    }
+                }, "json");
+                return false;
+            });
+
+            // Click en Provincia Dropdown Menu
+            $(".provinciabtn").click(function() {
+                var pid = $(this).attr("provinciaid");
+                $.post("/provincias", {id: pid}, function(data) {
+                    if (data.result == 'ok') {
+                        map.setCenter(new google.maps.LatLng(data.lat, data.lng));
+                        map.setZoom(11);
+                        limpiar_todos_markers();
+                        companies = data.companies;
+                        mostrar_Markers();
+                        for (var i in data.tipos) {
+                            var text = data.tipos[i];
+                            $("#typedesc"+i).html(text);
+                        }
+                    }
+                }, "json");
+                return false;
+            });
+
+            // Click en Ciudad Dropdown Menu
+            $(".ciudadbtn").click(function() {
+                var cid = $(this).attr("ciudadid");
+                $.post("/ciudades", {id: cid}, function(data) {
+                    if (data.result=='ok') {
+                        map.setCenter(new google.maps.LatLng(data.lat, data.lng));
+                        map.setZoom(13);
+                        limpiar_todos_markers();
+                        companies = data.companies;
+                        mostrar_Markers();
+                        for (var i in data.tipos) {
+                            var text = data.tipos[i];
+                            $("#typedesc"+i).html(text);
+                        }
+                    }
+                }, "json");
+                return false;
+            });
+
+            $("#id_pais option:first").remove();
+
+            $("#adicionarbtn").click(function() {
+                $("#adicionarpanel").modal({backdrop: 'static'}).css({ width: '700px', 'margin-left': function () { return -($(this).width() / 2); } });
+                $("#id_nombre").val('');
+                $("#id_alias").val('');
+                $("#id_tipo").val('');
+                $("#id_provincia").val('');
+                $("#id_ciudad").html('');
+                $("#id_direccion").val('');
+                $("#id_descripcion").val('');
+                $("#id_email").val('');
+                $("#id_website").val('');
+                $("#id_twitter").val('');
+                $("#id_facebook").val('');
+                $("#id_celular").val('');
+                $("#id_convencional").val('');
+                $("#adicionarpanel .alerta").hide();
+                $("#adicionarpanel .alerta2").hide();
+                clearAllHelpText();
+                $("#adicionarpanel").modal("show");
+                return false;
+            });
+
+            $(".btncerrar").click(function() {
+                $("#adicionarpanel").modal("hide");
+                return false;
+            });
+
+            helptext = function(sid, texto) {
+                $(sid.get(0).parentNode).find(".help-text").html(texto)
+            };
+
+            clearHelpText = function(sid) {
+                $(sid.get(0).parentNode).find(".help-text").html("");
+            };
+
+            clearAllHelpText = function(sid) {
+                $(".help-text").html("");
+            };
+
+            datosOK = false;
+
+            // Elementos del formulario obligatorios
+            $("#id_nombre").blur(function(){
+                if ($(this).val()){
+                    clearHelpText($(this));
+                    datosOK = true;
+                }else{
+                    datosOK = false;
+                    helptext($(this), "Campo obligatorio.");
+                }
+            });
+
+            $("#id_tipo").blur(function(){
+                if ($(this).val()){
+                    clearHelpText($(this));
+                    datosOK = true;
+                }else{
+                    datosOK = false;
+                    helptext($(this), "Campo obligatorio.");
+                }
+            });
+
+            $("#id_pais").blur(function(){
+                if ($(this).val()){
+                    clearHelpText($(this));
+                    datosOK = true;
+                }else{
+                    datosOK = false;
+                    helptext($(this), "Campo obligatorio.");
+                }
+            });
+
+            $("#id_provincia").blur(function(){
+                if ($(this).val()){
+                    clearHelpText($(this));
+                    datosOK = true;
+                }else{
+                    datosOK = false;
+                    helptext($(this), "Campo obligatorio.");
+                }
+            });
+
+            $("#id_provincia").change(function () {
+                var provid = $(this).val();
+                if (provid > 0){
+                    $.post("/provincia_ciudades", {"id": provid }, function(data){
+                        var options = '<option value="">---------- </option>';
+                        for (var i=0; i<data.length; i++) {
+                            options += '<option value="' + parseInt(data[i].pk) + '">' + data[i].fields['nombre'] + '</option>';
+                        }
+                        $("#id_ciudad").html(options);
+                    }, "json");
+                    $("#id_ciudad option:first").attr('selected', 'selected');
+                }else{
+                    $("#id_ciudad").html('');
+                }
+                $(this).attr('selected', 'selected');
+                return false;
+            });
+
+            $(".btnadicionar").click(function() {
+                var datos = {};
+                datos['companianombre'] = $("#id_nombre").val();
+                datos['companiaalias'] = $("#id_alias").val();
+                datos['companiatipo'] = $("#id_tipo").val();
+                datos['pais'] = $("#id_pais").val();
+                datos['provincia'] = $("#id_provincia").val();
+                datos['ciudad'] = $("#id_ciudad").val();
+                datos['direccion'] = $("#id_direccion").val();
+                datos['descripcion'] = $("#id_descripcion").val();
+                datos['email'] = $("#id_email").val();
+                datos['website'] = $("#id_website").val();
+                datos['twitter'] = $("#id_twitter").val();
+                datos['facebook'] = $("#id_facebook").val();
+                datos['celular'] = $("#id_celular").val();
+                datos['convencional'] = $("#id_convencional").val();
+
+                if (datosOK){
+                    $.post("/guardar", datos, function(data) {
+                        if (data.result == "ok") {
+                            $("#adicionarpanel .alerta").hide();
+                            $("#adicionarpanel .alerta2").hide();
+                            $("#adicionarpanel").modal("hide");
+                            mostrarNotificacionPanel(NOTIFICACION_INFO, "Notification",
+                                    "Great!. It have been successfully sent you company data for review " +
+                                    "<br/><p>Check the platform from 24 to 48 hours to see if your company is on the map. Thank you!</p>",
+                                    "Confirm",
+                                    cerrarNotificacionPanel);
+                        }
+                        if(data.result == "badexist"){
+                            $("#adicionarpanel .alerta").show();
+                        }
+                    }, "json");
+                }else{
+                    $("#adicionarpanel .alerta2").show();
+                }
+                return false;
+            });
+        });
+
+    </script>
+</head>
+<body>
+<div class="canvas">
+    <div id="zonas">
+
+        <div class="btn-group">
+            <a class="btn dropdown-toggle" data-toggle="dropdown" href="#">
+                Find Location
+                <span class="caret"></span>
+            </a>
+            <ul class="dropdown-menu">
+                <!-- Paises  -->
+                {% for pais in paises %}
+                    <li class="dropdown-submenu">
+                        <a class="paisbtn" paisid="{{ pais.id }}">{{ pais.nombre }}</a>
+                        <!-- Provincias  -->
+                        <ul class="dropdown-menu">
+                            {% for provincia in pais.mis_provincias %}
+                                <li class="dropdown-submenu">
+                                    <a href="#" provinciaid='{{ provincia.id }}' class="provinciabtn">{{ provincia.nombre }}</a>
+                                    <!-- Ciudades -->
+                                    <ul class="dropdown-menu">
+                                        {% for ciudad in provincia.mis_ciudades %}
+                                            <li><a tabindex="-1" href="#" ciudadid='{{ ciudad.id }}' class="ciudadbtn">{{ ciudad.nombre }}</a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div> <!--  DIV de Btn-Group   -->
+
+        <a href="#" id="adicionarbtn" class="btn btn-success"><i class="icon-plus icon-white"></i> Add Company</a>
+
+        {#  Companies at left side   #}
+        <div style="margin-top: 100px; margin-left: -150px;">
+            {% for tipo in tipos %}
+                <a href="#" class='lnktype' tid='{{ tipo.id }}'>
+                    <img src='/static/img/true.png' class='visiblemarker'/>
+                    <img src="/static/img/{{ tipo.imagen }}" alt="{{ tipo.nombre }}"/>
+                    <span id="typedesc{{ tipo.id }}">{{ tipo.nombre }} ({{ tipo.cantidad_publicada|floatformat:0 }})</span>
+                </a>
+                <br/>
+            {% endfor %}
+        </div>
+    </div>
+    <div id="map_canvas"></div>
+</div>
+
+
+<div class="modal fade hide" id="adicionarpanel" style="display: none;">
+    <div class="modal-header">
+        <h4>New Company</h4>
+    </div>
+    <div class="modal-body">
+        <div class="alert alert-error alerta" style="display: none">
+            Alert: The Company already exists
+        </div>
+        <div class="alert alert-error alerta2" style="display: none">
+            Alert: Complete all the form inputs
+        </div>
+        <form id="formulario" class='form-horizontal' method="POST">
+            {% for field in form %}
+                <fieldset class="control-group nomargins" style="margin-bottom: 0;">
+
+                    <label class="control-label" for="id_{{ field.name }}">
+                        {% if field.field.required %}
+                            <span class="requerido">*</span>
+                        {% endif %}
+                        {{ field.label }}
+                    </label>
+
+                    <div class="controls">
+                        {{ field }}
+                        <p class="help-text">{{ field.help_text }} </p>
+                    </div>
+                </fieldset>
+            {% endfor %}
+        </form>
+    </div>
+    <div class="modal-footer">
+        <a href="#" class="btn btncerrar btn-info"><i class="icon-arrow-left icon-white"></i> Close</a>
+        <a href="#" class="btn btn-success btnadicionar"><i class="icon-check icon-white"></i> Save</a>
+    </div>
+</div>
+
+{% include "notificacionpanel.html" %}
+</body>
+
+</html>
